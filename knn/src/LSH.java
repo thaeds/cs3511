@@ -2,7 +2,7 @@
 public class LSH 
 {
 	
-	private Hashtable[] hashTables;
+	private HashTable[] hashTables;
 	
 	public LSH(double[][] setPoints)
 	{

@@ -8,7 +8,16 @@ public class Node
 	{
 		this.location=location;
 	}
-	
+
+	public Node(double[] dlocation) {
+		int[] colbysadoufus = new int[dlocation.length];
+		for(int i = 0; i < dlocation.length; i++) {
+			colbysadoufus[i] = (int) dlocation[i];
+		}
+
+		this.location = colbysadoufus;
+	}
+
 	public double l2Distance(Node other)
 	{
 		double distance=0;

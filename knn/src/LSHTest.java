@@ -27,7 +27,7 @@ public class LSHTest
 	public static void test(int numberSetPoints, int numberQueryPoints, int sideDimension, int numberOfTests)
 	{
 		double[][] setPoints=getImagePoints(numberSetPoints, sideDimension, 0);
-		double[][] queryPoints=getImagePoints(numberSetPoints, sideDimension, 0);
+		double[][] queryPoints=getImagePoints(numberQueryPoints, sideDimension, 0);
 		double w=Math.pow(24,  1/4);
 		int u=(int)Math.round(Math.pow(2, 24*Math.log(2))*Math.log(setPoints.length));
 		HashTable LSHHashTable=new HashTable(w, setPoints[0].length, u);
@@ -55,7 +55,7 @@ public class LSHTest
     		BufferedImage img=null;
     		try 
     		{
-				img=ImageIO.read(new File("C:\\Users\\C\\workspace\\Trevi Images\\patches"+zeros.substring((""+numberImagesRead).length())+(""+numberImagesRead)+".bmp"));
+				img=ImageIO.read(new File("../../../images/patches"+zeros.substring((""+numberImagesRead).length())+(""+numberImagesRead)+".bmp"));
 			} 
     		catch (IOException e) 
     		{
