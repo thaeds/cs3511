@@ -1,30 +1,43 @@
 import java.util.ArrayList;
 import org.apache.commons.math3.linear.RealMatrix;
-import org.apache.commons.math3.linear.RealVector;
 
 import java.util.Hashtable;
 import java.util.Random;
 
 public class HashTable {
 	private static final int DIMS = 24;
-//	private static final double loadFactor = .75;
+	private static final double loadFactor = .75;
 	private RealMatrix A;
-	private Object hashbydim[][]; //Object is ArrayList<Node>
-	private int U;
-	private int w;
+	private Hashtable<ArrayList<Double>, Node> buckets;
+	private ArrayList<double[]> offsets;
+	private double w;
 	private LatticeDecoder decoder;
 
-	public HashTable(int w, int dimensions, int numberOfRounds) {
+	public HashTable(double w, int dimensions, int numberOfRounds) {
 		this.decoder = new LatticeDecoder(this.w);
 		Random rnd = new Random();
 		this.w = w;
-		this.U = numberOfRounds;
 		this.A = A.createMatrix(dimensions, DIMS);
 
 		for(int i = 0; i < dimensions; i++) {
 			for(int j = 0; j < DIMS; j++) {
 				A.setEntry(i,j,rnd.nextDouble());
 			}
+		}
+
+		for(int i = 0; i < numberOfRounds; i++) {
+			double rndoffset[] = new double[DIMS];
+			double magnitude = 0;
+			for(int j = 0; j < DIMS; j++) {
+				double rndval = rnd.nextDouble();
+				rndoffset[j] = rndval;
+				magnitude += rndval*rndval;
+			}
+			double scaleFactor = Math.sqrt(magnitude)/4/this.w;
+			for(int j = 0; i < rndoffset.length; i++) {
+				rndoffset[j] = rndoffset[j]/scaleFactor;
+			}
+			offsets.add(rndoffset);
 		}
 
 	}
@@ -34,49 +47,96 @@ public class HashTable {
      */
 	public void preProcess(double dataPoints[][])
 	{
-        this.hashbydim = new Object[DIMS][(int) Math.round(dataPoints[0].length/this.w)];
-//        this.hashbydim = new ArrayList<ArrayList<ArrayList<Node>>(Integer.MAX_VALUE/this.w)>(DIMS); // [DIMS][Integer.MAX_VALUE/this.w];
+		this.buckets = new Hashtable<ArrayList<Double>, Node>((int) ((dataPoints.length + 1)/loadFactor));
+//        this.buckets = new ArrayList<ArrayList<ArrayList<Node>>(Integer.MAX_VALUE/this.w)>(DIMS); // [DIMS][Integer.MAX_VALUE/this.w];
 
 		for(double[] point : dataPoints) {
-			int ipoint[point.length];
-			double[] projectedpoint;
+			int ipoint[] = new int[point.length];
+			double[] projectedpoint = A.operate(point);
+			Node thisNode;
 
 			for(int i = 0; i < point.length; i++) {
 				ipoint[i] = (int) point[i];
 			}
-			Node thisNode = new Node(ipoint);
-			projectedpoint = A.operate(point);
+            thisNode = new Node(ipoint);
+			for(int trial = 0; trial < offsets.size(); trial++) {
+				double latticepoint[];
+				ArrayList<Double> lp;
 
-			double latticepoint[] = decoder.decode(offset, projectedpoint); //TODO figure offset out
-			for (int i = 0; i < DIMS; i++)
-			{
-				ArrayList<Node> bucket = (ArrayList<Node>) hashbydim[i][(int)latticepoint[i]];
+				latticepoint = decoder.decode(offsets.get(trial), projectedpoint); //TODO figure offset out
+				lp = new ArrayList<Double>(DIMS);
+				for(int i = 0; i < DIMS; i++) {
+					lp.add(latticepoint[i]);
+				}
+				buckets.put(lp, thisNode);
 			}
 		}
 
 	}
 
 	public Node query(Node queryNode) {
-		double dlocation[queryNode.location.length];
-		for(int i = 0; i < queryNode.location.length; i++) {
-			dlocation[i] = (double) queryNode.location[i];
-		}
 		double projectedpoint[];
-		projectedpoint = this.A.operate(dlocation);
-		double latticepoint[] = decoder.decode(offset, projectedpoint); //TODO figure offset out
-		ArrayList<Node> nodesFound;
-		for(int i = 0; i < DIMS; i++) {
-			ArrayList<Node> nodesInBucket = ((ArrayList<Node>) hashbydim[i][(int) latticepoint[i]]);
-			if (0 == i) {
-				nodesFound = nodesInBucket;
-			} else {
-				for(node : nodesFound) {
-					if(!nodesInBucket.contains(node)) {
-						nodesFound.remove(node);
-					}
+		double latticepoint[];
+		ArrayList<Double> hashablelocation;
+		Node foundNode = null;
+
+		projectedpoint = this.A.operate(intAtodoubleA(queryNode.location));
+		for(int i = 0; null == foundNode && i < offsets.size(); i++) {
+			latticepoint = decoder.decode(offsets.get(i), projectedpoint);
+			hashablelocation = PrimdoubleToAL(latticepoint);
+			foundNode = buckets.get(PrimdoubleToAL(latticepoint));
+		}
+
+		return foundNode;
+	}
+
+	public Node queryBest(Node queryNode) {
+		Node bestNode = null;
+		double bestDist = Integer.MAX_VALUE;
+
+		ArrayList<Node> nodes = new ArrayList<Node>(offsets.size());
+		for(int i = 0; i < nodes.size(); i++) {
+			nodes.set(i, queryOffset(queryNode, offsets.get(i)));
+		}
+		for(int i = 0; i < nodes.size(); i++) {
+			Node thisNode = nodes.get(i);
+			if(thisNode != null) {
+				double thisDist = queryNode.l2Distance((thisNode));
+				if(bestDist > thisDist) {
+					bestNode = thisNode;
+					bestDist = queryNode.l2Distance(thisNode);
 				}
 			}
 		}
+
+		return bestNode;
+	}
+
+	private Node queryOffset(Node queryNode, double[] offset) {
+		double projectedpoint[];
+		ArrayList<Double> hashablelocation;
+
+		projectedpoint = this.A.operate(intAtodoubleA(queryNode.location));
+		hashablelocation = PrimdoubleToAL(decoder.decode(offset, projectedpoint));
+
+		return buckets.get(hashablelocation);
+	}
+
+	private double[] intAtodoubleA(int in[]) {
+		double out[] = new double[in.length];
+		for(int i = 0; i < in.length; i++) {
+			out[i] = (double) in[i];
+		}
+
+		return out;
+	}
+
+	private ArrayList<Double> PrimdoubleToAL(double in[]) {
+		ArrayList<Double> out = new ArrayList<Double>(in.length);
+		for (int i = 0; i < in.length; i++)
+			out.set(i, in[i]);
+
+		return out;
 	}
 
 //	/*
