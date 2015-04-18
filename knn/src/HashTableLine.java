@@ -2,11 +2,8 @@
 public class HashTableLine extends HashTable
 {
 	
-	
-	
 	public HashTableLine(int w, int dimensions, int numberOfRounds)
 	{
-		
 		
 	}
 	
