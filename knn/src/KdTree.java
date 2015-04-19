@@ -15,9 +15,11 @@ public class KdTree<T extends Comparable<T>> {
 	
 	private final int ROOT_DISC = 0;
 	private List<KdTreeObserver> observers = new ArrayList<KdTreeObserver>();
+	private Metric<T[]> metric;
 	
-	public KdTree(int recordSize) {
+	public KdTree(int recordSize, Metric<T[]> metric) {
 		this.recordSize = recordSize;
+		this.metric = metric;
 	}
 	
 	public T[] add(T[] record) {
@@ -126,25 +128,24 @@ public class KdTree<T extends Comparable<T>> {
 	}
 	
 	private int kNNHelper(T[] query, int k, PriorityQueue<Node<T>> que, Node<T> node) {
-		/*try {
+		try {
 			Thread.sleep(100);
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}*/
-		notifyObserversNodeChange(node.record);
-		double distSq = 0;
-		for (int i = 0; i < query.length; i++) {
-			distSq += ((Double)query[i] - (Double)node.record[i]) * ((Double)query[i] - (Double)node.record[i]); //Generalize for any metric
 		}
-		node.temp = distSq;
+		notifyObserversNodeChange(node.record);
+		node.temp = metric.distance(query, node.record);
 		
 		if (que.size() < k) {
 			que.add(node);
+			notifyObserversQueueChanged(que);
+			notifyObserversMaxChange(que.peek().temp);
 		} else if (que.peek().temp > node.temp) {
 			que.remove();
 			que.add(node);
 			notifyObserversMaxChange(que.peek().temp);
+			notifyObserversQueueChanged(que);
 		}
 		
 		int checked = 0;
@@ -167,6 +168,7 @@ public class KdTree<T extends Comparable<T>> {
 				}
 			}
 		}
+		notifyObserversNodeChange(node.record);
 		return checked;
 
 	}
@@ -366,6 +368,12 @@ public class KdTree<T extends Comparable<T>> {
 	private void notifyObserversQueryChange(T[] query) {
 		for (KdTreeObserver observer : observers) {
 			observer.queryChanged(query);
+		}
+	}
+	
+	private void notifyObserversQueueChanged(PriorityQueue que) {
+		for (KdTreeObserver observer : observers) {
+			observer.queueChanged(que);
 		}
 	}
 	

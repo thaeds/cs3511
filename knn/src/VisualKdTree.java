@@ -8,10 +8,10 @@ public class VisualKdTree extends KdTree<Double> {
 	private List<Double[]> preOrder;
 	
 	private final int scale = 1;
-	private final int NODE_RADIUS = 1;
+	private final int NODE_RADIUS = 5;
 	
 	public VisualKdTree(int recordSize) {
-		super(recordSize);
+		super(recordSize, new EuclideanMetric());
 	}
 	
 	public void update() {
