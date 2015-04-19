@@ -1,7 +1,12 @@
 import java.util.ArrayList;
+
+import org.apache.commons.math3.linear.MatrixUtils;
 import org.apache.commons.math3.linear.RealMatrix;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Hashtable;
+import java.util.List;
 import java.util.Random;
 
 public class HashTable {
@@ -9,19 +14,19 @@ public class HashTable {
 	private static final double loadFactor = .75;
 	private RealMatrix A;
 	private Hashtable<ArrayList<Double>, Node> buckets;
-	private ArrayList<double[]> offsets;
+	private List<double[]> offsets;
 	private double w;
 	private LatticeDecoder decoder;
 
 	public HashTable(double w, int dimensions, int numberOfRounds) {
+		this.w = w;
 		this.decoder = new LatticeDecoder(this.w);
 		Random rnd = new Random();
-		this.w = w;
-		this.A = A.createMatrix(dimensions, DIMS);
-
+		this.A = MatrixUtils.createRealMatrix(DIMS, dimensions);
+		offsets = new ArrayList<double[]>();
 		for(int i = 0; i < dimensions; i++) {
 			for(int j = 0; j < DIMS; j++) {
-				A.setEntry(i,j,rnd.nextDouble());
+				A.setEntry(j, i, rnd.nextDouble());
 			}
 		}
 
@@ -95,8 +100,8 @@ public class HashTable {
 		double bestDist = Integer.MAX_VALUE;
 
 		ArrayList<Node> nodes = new ArrayList<Node>(offsets.size());
-		for(int i = 0; i < nodes.size(); i++) {
-			nodes.set(i, queryOffset(queryNode, offsets.get(i)));
+		for(int i = 0; i < offsets.size(); i++) {
+			nodes.add(queryOffset(queryNode, offsets.get(i)));
 		}
 		for(int i = 0; i < nodes.size(); i++) {
 			Node thisNode = nodes.get(i);
@@ -108,7 +113,7 @@ public class HashTable {
 				}
 			}
 		}
-
+		//System.out.println(Arrays.toString(nodes.toArray()));
 		return bestNode;
 	}
 
@@ -133,9 +138,9 @@ public class HashTable {
 
 	private ArrayList<Double> PrimdoubleToAL(double in[]) {
 		ArrayList<Double> out = new ArrayList<Double>(in.length);
-		for (int i = 0; i < in.length; i++)
-			out.set(i, in[i]);
-
+		for (int i = 0; i < in.length; i++) {
+			out.add(in[i]);
+		}
 		return out;
 	}
 
